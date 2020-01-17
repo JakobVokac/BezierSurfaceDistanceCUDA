@@ -207,6 +207,17 @@ src/CUDANewton.o : ../src/CUDANewton.cu \
     /usr/include/c++/5/bits/ostream.tcc \
     /usr/include/c++/5/istream \
     /usr/include/c++/5/bits/istream.tcc \
+    /usr/include/c++/5/fstream \
+    /usr/include/c++/5/bits/codecvt.h \
+    /usr/include/x86_64-linux-gnu/c++/5/bits/basic_file.h \
+    /usr/include/x86_64-linux-gnu/c++/5/bits/c++io.h \
+    /usr/include/c++/5/bits/fstream.tcc \
+    /usr/include/c++/5/vector \
+    /usr/include/c++/5/bits/stl_construct.h \
+    /usr/include/c++/5/bits/stl_uninitialized.h \
+    /usr/include/c++/5/bits/stl_vector.h \
+    /usr/include/c++/5/bits/stl_bvector.h \
+    /usr/include/c++/5/bits/vector.tcc \
     /usr/include/c++/5/numeric \
     /usr/include/c++/5/bits/stl_numeric.h \
     ../src/model.h \

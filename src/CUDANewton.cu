@@ -9,6 +9,8 @@
  */
 
 #include <iostream>
+#include <fstream>
+#include <vector>
 #include <numeric>
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,6 +22,7 @@
 static void CheckCudaErrorAux (const char *, unsigned, const char *, cudaError_t);
 #define CUDA_CHECK_RETURN(value) CheckCudaErrorAux(__FILE__,__LINE__, #value, value)
 
+using namespace std;
 /**
  * CUDA kernel that computes reciprocal values for a given vector
  */
@@ -152,8 +155,7 @@ __global__ void kernel(vec3d *points, double *distances, int size,
 		}
 		OptState2D loc = op.optimizeForPoint(P);
 //		printf("threadidx.x: %d, blockDim.x: %d, blockIdx.x: %d, i: %d, arrId: %d, dist: %lf\n",threadIdx.x, blockDim.x, blockIdx.x, i, arrId, dist);
-		if(isnan(loc.dist))
-			printf("P: %lf, %lf, %lf; uv: %lf, %lf; dist: %lf\n",P.x,P.y,P.z,loc.u,loc.v,loc.dist);
+
 		distances[arrId] = loc.dist;
 	}
 }
@@ -198,7 +200,43 @@ __global__ void kernel(vec3d *points, double *distances, int size,
 
 int main(void)
 {
-	int N = 20000;
+	std::vector<double> inputPoints;
+	ifstream inputFile("input.txt");        // Input file stream object
+
+	// Check if exists and then open the file.
+	if (inputFile.good()) {
+		// Push items into a vector
+		double current_number = 0;
+		while (inputFile >> current_number){
+			inputPoints.push_back(current_number);
+		}
+
+		// Close the file.
+		inputFile.close();
+
+		cout << endl;
+	}else {
+		cout << "Error reading input file!" << endl;
+		cout << "Input file must have name \"input.txt\" and must consist of only numbers, no text!" << endl;
+		cout << "The program will read the numbers in triples and each 3 numbers will be interpreted as one point." << endl;
+
+		exit(0);
+	}
+
+	if(inputPoints.size() % 3 != 0){
+		cout << "Number of input numbers should be divisible by 3 (3 dimensions per point)!" << endl;
+		cout << "Ignoring last few numbers." << endl;
+
+		int size = inputPoints.size();
+		int truncate = size % 3;
+		for (int i = 0; i < truncate; ++i) {
+			inputPoints.pop_back();
+		}
+	}
+
+	int nBlocks = 4;
+	int nThreads = 32;
+	int N = inputPoints.size()/3;
 	double dist = 0.5;
 	vec3d *points;
 	double *distances;
@@ -232,7 +270,7 @@ int main(void)
           p5 = Model::getPart(model,5);
 
 	cudaMemGetInfo(&freeMem,&totalMem);
-	printf("free memory: %d, total memory: %d\n",freeMem,totalMem);
+	printf("free memory before data load: %d, total memory: %d\n",freeMem,totalMem);
 
 	// Allocate Unified Memory – accessible from CPU or GPU
 	CUDA_CHECK_RETURN(cudaMallocManaged(&points, N*sizeof(vec3d)));
@@ -251,7 +289,7 @@ int main(void)
 	CUDA_CHECK_RETURN(cudaMallocManaged(&sur12, sizeof(BottomParametric)));
 
 	cudaMemGetInfo(&freeMem,&totalMem);
-	printf("free memory: %d, total memory: %d\n",freeMem,totalMem);
+	printf("free memory after data load: %d, total memory: %d\n",freeMem,totalMem);
 
 	*sur1 = p0.getTopParametric();
 	*sur2 = p3.getTopParametric();
@@ -272,15 +310,18 @@ int main(void)
 	// initialize x and y arrays on the host
 	for (int i = 0; i < N; i++) {
 
-		vec3d a = {double(rand())*100/(RAND_MAX),double(rand())*100/(RAND_MAX),double(rand())*100/(RAND_MAX)};
+        vec3d a = {inputPoints[i*3 + 0],inputPoints[i*3 + 1],inputPoints[i*3 + 2]};
 
 		points[i] = a;
 	}
 
 //	*sur = TopParametric(*c,*c,*c,*c,x[0],x[1],x[2],x[3]);
 	vec3d h = sur1->at(0,0);
-	printf("dividing height: %f\n",h.z);
-	kernel<<<4,32>>>(points,distances,N,sur1,sur2,sur3,sur4,sur5,sur6,sur7,sur8,sur9,sur10,sur11,sur12,h.z);
+//	printf("dividing height: %f\n",h.z);
+
+	printf("currently working with %d blocks with %d threads each\n",nBlocks,nThreads);
+
+	kernel<<<nBlocks,nThreads>>>(points,distances,N,sur1,sur2,sur3,sur4,sur5,sur6,sur7,sur8,sur9,sur10,sur11,sur12,h.z);
 	cudaDeviceSynchronize();
 
 	double sum = 0;
@@ -289,6 +330,7 @@ int main(void)
 	}
 	printf("total distance: %lf\n", sum);
 	printf("average distance: %lf\n", sum/N);
+	printf("number of points: %d\n", N);
 
 	CUDA_CHECK_RETURN(cudaFree(points));
 	CUDA_CHECK_RETURN(cudaFree(distances));
