@@ -23,11 +23,10 @@ static void CheckCudaErrorAux (const char *, unsigned, const char *, cudaError_t
 #define CUDA_CHECK_RETURN(value) CheckCudaErrorAux(__FILE__,__LINE__, #value, value)
 
 using namespace std;
-/**
- * CUDA kernel that computes reciprocal values for a given vector
- */
 
-
+//This function runs in parallel for each thread. It takes in all of the surfaces, copies them to shared memory,
+//then computes the distance for all of the points. It finds which surface is closest to the current point by splitting the search space
+//and finding which slice of the model the point belongs to.
 __global__ void kernel(vec3d *points, double *distances, int size,
 		TopParametric *sur1,
 		TopParametric *sur2,
@@ -154,50 +153,16 @@ __global__ void kernel(vec3d *points, double *distances, int size,
 			}
 		}
 		OptState2D loc = op.optimizeForPoint(P);
-//		printf("threadidx.x: %d, blockDim.x: %d, blockIdx.x: %d, i: %d, arrId: %d, dist: %lf\n",threadIdx.x, blockDim.x, blockIdx.x, i, arrId, dist);
 
 		distances[arrId] = loc.dist;
 	}
 }
 
 
-
-//
-///**
-// * Host function that copies the data and launches the work on GPU
-// */
-//float *gpuReciprocal(float *data, unsigned size)
-//{
-//	float *rc = new float[size];
-//	float *gpuData;
-//
-//	CUDA_CHECK_RETURN(cudaMalloc((void **)&gpuData, sizeof(float)*size));
-//	CUDA_CHECK_RETURN(cudaMemcpy(gpuData, data, sizeof(float)*size, cudaMemcpyHostToDevice));
-//
-//	static const int BLOCK_SIZE = 256;
-//	const int blockCount = (size+BLOCK_SIZE-1)/BLOCK_SIZE;
-//	reciprocalKernel<<<blockCount, BLOCK_SIZE>>> (gpuData, size);
-//
-//	CUDA_CHECK_RETURN(cudaMemcpy(rc, gpuData, sizeof(float)*size, cudaMemcpyDeviceToHost));
-//	CUDA_CHECK_RETURN(cudaFree(gpuData));
-//	return rc;
-//}
-//
-//float *cpuReciprocal(float *data, unsigned size)
-//{
-//	float *rc = new float[size];
-//	for (unsigned cnt = 0; cnt < size; ++cnt) rc[cnt] = 1.0/data[cnt];
-//	return rc;
-//}
-//
-//
-//void initialize(float *data, unsigned size)
-//{
-//	for (unsigned i = 0; i < size; ++i)
-//		data[i] = .5*(i+1);
-//}
-
-
+//The main function takes in the input from the input.txt file and creates the model.
+//The specifications of the current model are passed as parameters to the model class.
+//It then gets all of the surfaces and builds the optimizer, then passes both to the GPU.
+//It then calls the kernel function.
 int main(void)
 {
 	std::vector<double> inputPoints;
