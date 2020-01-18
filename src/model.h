@@ -1,6 +1,17 @@
 //
 // Created by s3179222 on 10/12/19.
 //
+/*
+ * This is a factory class for the surfaces representing the aortic valve model. The class produces different types
+ * of surfaces, which include: TopParametric, BottomParametric.
+ *
+ * The to create the surfaces one must instantiate this class and call the appropriate functions. This class is not static,
+ * as it is called multiple times to create each part of the model and the parameters themselves must be set to the model's
+ * specifications.
+ *
+ * The constructor parameters correspond to the theoretical model, devised by Tanja de Vries. For their description,
+ * please see her BSc Thesis "Distance computations on a mathematical model of the aortic valve geometry".
+ */
 
 #ifndef HEARTVALVEMODEL_MODEL_H
 #define HEARTVALVEMODEL_MODEL_H

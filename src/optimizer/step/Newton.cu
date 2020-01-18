@@ -1,7 +1,9 @@
 //
 // Created by s3179222 on 12/9/19.
 //
-
+/*
+ * This class is the implementation of the Newton-Raphson method for the numerical optimizer.
+ */
 #include "Newton.h"
 
 __host__ __device__

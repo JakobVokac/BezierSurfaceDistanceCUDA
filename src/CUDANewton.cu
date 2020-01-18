@@ -4,7 +4,34 @@
  Author      : Jakob Vokac
  Version     :
  Copyright   : Your copyright notice
- Description : CUDA compute reciprocals
+ Description : Bezier Surface Distance algorithm implemented in CUDA
+
+ This is the CUDA translation of the Bezier Surface Distance algorithm on:
+ https://github.com/JakobVokac/BezierSurfaceDistance
+
+ For more details on the algorithm, vision the repo above. 
+
+ The main differences between this implementation and the C++ version are:
+
+	- this implementation only includes the Newton-Raphson method
+	  with bisection and quadratic interpolation for preprocessing,
+	  which has been tested to perform the most reliably and the fastest on a CPU,
+
+ 	- interfaces have been taken out due to limited CUDA support for C++ and
+	  the implementations and optimizer classes have been altered to fit the
+	  new implementation accordingly,
+
+	- all classes can now function as host or device code, so the optimizer
+	  can be tested on both the CPU and GPU from this code,
+
+	- the main function invokes a kernel function for the GPU to compute the input;
+	  currently all surfaces are passed to each block and placed into shared memory,
+	  which has proven to be suboptimal, this should be fixed in future work
+
+	- the measurement and plotting classes have been left out as they only serve to
+	  test the reliabiliy of the algorithm, which should perform identically in this
+	  version and the original C++ version
+
  ============================================================================
  */
 

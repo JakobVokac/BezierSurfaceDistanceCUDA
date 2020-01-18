@@ -1,7 +1,14 @@
 //
 // Created by s3179222 on 12/8/19.
 //
-
+/*
+ * This is the implementation of the top part of each leaf in the model. The class contains all of the corners and edges
+ * (see model.h), which include the bending curve, the bottom half of the symmetry curve and the bottom half
+ * of the sinusoidal curve.
+ *
+ * The surface is an interpolation between the 3 edges. In the case of the bottom edge, the class returns an edge,
+ * where all control points are Q_r.
+ */
 #include "BottomParametric.h"
 __host__ __device__
 BottomParametric::BottomParametric(cubiccrv sinCurve, cubiccrv symCurve, cubiccrv bendCurve, vec3d Q_r, vec3d Q_b_sin,

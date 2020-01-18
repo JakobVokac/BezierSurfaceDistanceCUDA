@@ -1,7 +1,9 @@
 //
 // Created by s3179222 on 12/8/19.
 //
-
+/*
+ * This class is a translation of the surface interface. Currently it has no use.
+ */
 #include "mySurface.h"
 
 __host__ __device__
