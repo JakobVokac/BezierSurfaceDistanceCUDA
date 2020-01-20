@@ -252,11 +252,8 @@ int main(void)
 		}
 	}
 
-	int nBlocks = 4;
-	int nThreads = 32;
+
 	int N = inputPoints.size()/3;
-	N = 10000;
-	double dist = 0.5;
 	vec3d *points1, *points2, *points3, *points4, *points5, *points6, *points7, *points8, *points9, *points10, *points11, *points12;
 	int idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8, idx9, idx10, idx11, idx12;
 	idx1 = idx2 = idx3 = idx4 = idx5 = idx6 = idx7 = idx8 = idx9 = idx10 = idx11 = idx12 = 0;
@@ -494,8 +491,8 @@ int main(void)
     t_start = chrono::high_resolution_clock::now();
 
 	kernel<<<12,4>>>(points1, points2, points3, points4, points5, points6, points7, points8, points9, points10, points11, points12,
-							idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8, idx9, idx10, idx11, idx12,
-							distances,N,sur1,sur2,sur3,sur4,sur5,sur6,sur7,sur8,sur9,sur10,sur11,sur12);
+					idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8, idx9, idx10, idx11, idx12,
+					distances,N,sur1,sur2,sur3,sur4,sur5,sur6,sur7,sur8,sur9,sur10,sur11,sur12);
 	cudaDeviceSynchronize();
 	t_stop = chrono::high_resolution_clock::now();
 	t_duration = chrono::duration_cast<chrono::microseconds>(t_stop - t_start);
