@@ -38,6 +38,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <chrono>
 #include <numeric>
 #include <stdlib.h>
 #include <stdio.h>
@@ -51,10 +52,34 @@ static void CheckCudaErrorAux (const char *, unsigned, const char *, cudaError_t
 
 using namespace std;
 
-//This function runs in parallel for each thread. It takes in all of the surfaces, copies them to shared memory,
-//then computes the distance for all of the points. It finds which surface is closest to the current point by splitting the search space
-//and finding which slice of the model the point belongs to.
-__global__ void kernel(vec3d *points, double *distances, int size,
+//This function runs in parallel for each thread. The function takes in the split collections of points and
+//gives them to the allocated blocks. Each block takes care of one collection and outputs the distances to global memory.
+__global__ void kernel(
+		vec3d *points1,
+		vec3d *points2,
+		vec3d *points3,
+		vec3d *points4,
+		vec3d *points5,
+		vec3d *points6,
+		vec3d *points7,
+		vec3d *points8,
+		vec3d *points9,
+		vec3d *points10,
+		vec3d *points11,
+		vec3d *points12,
+		int idx1,
+		int idx2,
+		int idx3,
+		int idx4,
+		int idx5,
+		int idx6,
+		int idx7,
+		int idx8,
+		int idx9,
+		int idx10,
+		int idx11,
+		int idx12,
+		double *distances, int size,
 		TopParametric *sur1,
 		TopParametric *sur2,
 		TopParametric *sur3,
@@ -66,129 +91,130 @@ __global__ void kernel(vec3d *points, double *distances, int size,
 		BottomParametric *sur9,
 		BottomParametric *sur10,
 		BottomParametric *sur11,
-		BottomParametric *sur12,
-		double divHeight
-		){
+		BottomParametric *sur12
+	){
 
 	optimizer op = optimizer(
-			bisection(8),
-			quadraticInterpolation(8),
-			Newton(1.0),
-			sur1,
-			sur7,
-			vec3d(0,0,0),
-			0.00000001,
-			20,
-			2
+				bisection(8),
+				quadraticInterpolation(8),
+				Newton(1.0),
+				sur1,
+				sur7,
+				vec3d(0,0,0),
+				0.00000001,
+				20,
+				2
 	);
-	__shared__ TopParametric top1, top2, top3, top4, top5, top6;
-	__shared__ BottomParametric bot1, bot2, bot3, bot4, bot5, bot6;
 
-	if(threadIdx.x == 0)
-		top1 = *sur1;
-	if(threadIdx.x == 1)
-		top2 = *sur2;
-	if(threadIdx.x == 2)
-		top3 = *sur3;
-	if(threadIdx.x == 3)
-		top4 = *sur4;
-	if(threadIdx.x == 4)
-		top5 = *sur5;
-	if(threadIdx.x == 5)
-		top6 = *sur6;
-	if(threadIdx.x == 6)
-		bot1 = *sur7;
-	if(threadIdx.x == 7)
-		bot2 = *sur8;
-	if(threadIdx.x == 8)
-		bot3 = *sur9;
-	if(threadIdx.x == 9)
-		bot4 = *sur10;
-	if(threadIdx.x == 10)
-		bot5 = *sur11;
-	if(threadIdx.x == 11)
-		bot6 = *sur12;
-
-	__syncthreads();
-	for(int i = 0; i < size; i+= 1024){
-		int arrId = threadIdx.x + blockDim.x * blockIdx.x + i;
-
-		if(arrId >= size)
-			break;
-		vec3d P = points[arrId];
-
-		op.setTopOrBot(P.z > divHeight);
-
-		if(P.x == 0){
-			if(P.y == 0){
-				op.setTop(&top1);
-				op.setBot(&bot1);
-			}
-			else if(P.y > 0){
-				op.setTop(&top2);
-				op.setBot(&bot2);
-			}
-			else if(P.y < 0){
-				op.setTop(&top5);
-				op.setBot(&bot5);
-			}
+	if(blockIdx.x < 6){
+		TopParametric top;
+		vec3d *points;
+		int size;
+		if(blockIdx.x == 0){
+			top = *sur1;
+			points = points1;
+			size = idx1;
+		}
+		if(blockIdx.x == 1){
+			top = *sur2;
+			points = points2;
+			size = idx2;
+		}
+		if(blockIdx.x == 2){
+			top = *sur3;
+			points = points3;
+			size = idx3;
+		}
+		if(blockIdx.x == 3){
+			top = *sur4;
+			points = points4;
+			size = idx4;
+		}
+		if(blockIdx.x == 4){
+			top = *sur5;
+			points = points5;
+			size = idx5;
+		}
+		if(blockIdx.x == 5){
+			top = *sur6;
+			points = points6;
+			size = idx6;
 		}
 
-		if(P.x > 0 && P.y > 0){
-			if(P.y/P.x < sin(M_PI/6)/cos(M_PI/6)){
-				op.setTop(&top1);
-				op.setBot(&bot1);
-			}else if(P.y/P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
-				op.setTop(&top1);
-				op.setBot(&bot1);
-			}else{
-				op.setTop(&top2);
-				op.setBot(&bot2);
-			}
-		}else if(P.x < 0 && P.y < 0){
-			if(P.y/-P.x < sin(M_PI/6)/cos(M_PI/6)){
-				op.setTop(&top3);
-				op.setBot(&bot3);
-			}else if(P.y/-P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
-				op.setTop(&top3);
-				op.setBot(&bot3);
-			}else{
-				op.setTop(&top2);
-				op.setBot(&bot2);
-			}
-		}else if(P.x < 0 && P.y < 0){
-			if(-P.y/-P.x < sin(M_PI/6)/cos(M_PI/6)){
-				op.setTop(&top4);
-				op.setBot(&bot4);
-			}else if(-P.y/-P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
-				op.setTop(&top4);
-				op.setBot(&bot4);
-			}else{
-				op.setTop(&top5);
-				op.setBot(&bot5);
-			}
-		}else if(P.x > 0 && P.y < 0){
-			if(-P.y/P.x < sin(M_PI/6)/cos(M_PI/6)){
-				op.setTop(&top6);
-				op.setBot(&bot6);
-			}else if(-P.y/P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
-				op.setTop(&top6);
-				op.setBot(&bot6);
-			}else{
-				op.setTop(&top5);
-				op.setBot(&bot5);
-			}
-		}
-		OptState2D loc = op.optimizeForPoint(P);
+		op.setTopOrBot(1);
+		op.setTop(&top);
 
-		distances[arrId] = loc.dist;
+		for(int i = 0; i < size; i+= blockDim.x){
+			int arrId = threadIdx.x + i;
+
+			if(arrId >= size)
+				break;
+			vec3d P = points[arrId];
+
+			OptState2D loc = op.optimizeForPoint(P);
+
+			distances[arrId] = loc.dist;
+		}
+
+	}else{
+		BottomParametric bot;
+		vec3d *points;
+		int size;
+		if(blockIdx.x == 6){
+			bot = *sur7;
+			points = points7;
+			size = idx7;
+		}
+		if(blockIdx.x == 7){
+			bot = *sur8;
+			points = points8;
+			size = idx8;
+		}
+		if(blockIdx.x == 8){
+			bot = *sur9;
+			points = points9;
+			size = idx9;
+		}
+		if(blockIdx.x == 9){
+			bot = *sur10;
+			points = points10;
+			size = idx10;
+		}
+		if(blockIdx.x == 10){
+			bot = *sur11;
+			points = points11;
+			size = idx11;
+		}
+		if(blockIdx.x == 11){
+			bot = *sur12;
+			points = points12;
+			size = idx12;
+		}
+
+		op.setTopOrBot(0);
+		op.setBot(&bot);
+
+		for(int i = 0; i < size; i+= blockDim.x){
+			int arrId = threadIdx.x + i;
+
+			if(arrId >= size)
+				break;
+			vec3d P = points[arrId];
+
+			OptState2D loc = op.optimizeForPoint(P);
+
+			distances[arrId] = loc.dist;
+		}
+
 	}
+
 }
 
 
 //The main function takes in the input from the input.txt file and creates the model.
 //The specifications of the current model are passed as parameters to the model class.
 //It then gets all of the surfaces and builds the optimizer, then passes both to the GPU.
+//It also splits the collection of points into 12 arrays, one for each block.
 //It then calls the kernel function.
 int main(void)
 {
@@ -229,8 +255,11 @@ int main(void)
 	int nBlocks = 4;
 	int nThreads = 32;
 	int N = inputPoints.size()/3;
+	N = 10000;
 	double dist = 0.5;
-	vec3d *points;
+	vec3d *points1, *points2, *points3, *points4, *points5, *points6, *points7, *points8, *points9, *points10, *points11, *points12;
+	int idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8, idx9, idx10, idx11, idx12;
+	idx1 = idx2 = idx3 = idx4 = idx5 = idx6 = idx7 = idx8 = idx9 = idx10 = idx11 = idx12 = 0;
 	double *distances;
 	size_t freeMem, totalMem;
 	TopParametric *sur1, *sur2, *sur3, *sur4, *sur5, *sur6;
@@ -265,7 +294,20 @@ int main(void)
 	printf("free memory before data load: %d, total memory: %d\n",freeMem,totalMem);
 
 	// Allocate Unified Memory – accessible from CPU or GPU
-	CUDA_CHECK_RETURN(cudaMallocManaged(&points, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points1, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points2, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points3, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points4, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points5, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points6, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points7, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points8, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points9, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points10, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points11, N*sizeof(vec3d)));
+	CUDA_CHECK_RETURN(cudaMallocManaged(&points12, N*sizeof(vec3d)));
+
+
 	CUDA_CHECK_RETURN(cudaMallocManaged(&distances, N*sizeof(double)));
 	CUDA_CHECK_RETURN(cudaMallocManaged(&sur1, sizeof(TopParametric)));
 	CUDA_CHECK_RETURN(cudaMallocManaged(&sur2, sizeof(TopParametric)));
@@ -298,24 +340,167 @@ int main(void)
 	*sur12 = p1.getBottomParametric();
 
 	srand(1);
-
+	vec3d h = sur1->at(0,0);
+	double divHeight = h.z;
 	// initialize x and y arrays on the host
 	for (int i = 0; i < N; i++) {
 
-        vec3d a = {inputPoints[i*3 + 0],inputPoints[i*3 + 1],inputPoints[i*3 + 2]};
+        vec3d P = {double(rand())/RAND_MAX*20 + 5,double(rand())/RAND_MAX*20 + 5,double(rand())/RAND_MAX*20 + 5};
 
-		points[i] = a;
+		if(P.x == 0){
+			if(P.y == 0){
+				if(P.z > divHeight){
+					points1[idx1] = P;
+					idx1++;
+				}else{
+					points7[idx7] = P;
+					idx7++;
+				}
+			}
+			else if(P.y > 0){
+				if(P.z > divHeight){
+					points2[idx2] = P;
+					idx2++;
+				}else{
+					points8[idx8] = P;
+					idx8++;
+				}
+			}
+			else if(P.y < 0){
+				if(P.z > divHeight){
+					points5[idx5] = P;
+					idx5++;
+				}else{
+					points11[idx11] = P;
+					idx11++;
+				}
+			}
+		}
+
+		if(P.x > 0 && P.y > 0){
+			if(P.y/P.x < sin(M_PI/6)/cos(M_PI/6)){
+				if(P.z > divHeight){
+					points1[idx1] = P;
+					idx1++;
+				}else{
+					points7[idx7] = P;
+					idx7++;
+				}
+			}else if(P.y/P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
+				if(P.z > divHeight){
+					points1[idx1] = P;
+					idx1++;
+				}else{
+					points7[idx7] = P;
+					idx7++;
+				}
+			}else{
+				if(P.z > divHeight){
+					points1[idx2] = P;
+					idx2++;
+				}else{
+					points8[idx8] = P;
+					idx8++;
+				}
+			}
+		}else if(P.x < 0 && P.y < 0){
+			if(P.y/-P.x < sin(M_PI/6)/cos(M_PI/6)){
+				if(P.z > divHeight){
+					points3[idx3] = P;
+					idx3++;
+				}else{
+					points9[idx9] = P;
+					idx9++;
+				}
+			}else if(P.y/-P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
+				if(P.z > divHeight){
+					points3[idx3] = P;
+					idx3++;
+				}else{
+					points9[idx9] = P;
+					idx9++;
+				}
+			}else{
+				if(P.z > divHeight){
+					points1[idx2] = P;
+					idx2++;
+				}else{
+					points8[idx8] = P;
+					idx8++;
+				}
+			}
+		}else if(P.x < 0 && P.y < 0){
+			if(-P.y/-P.x < sin(M_PI/6)/cos(M_PI/6)){
+				if(P.z > divHeight){
+					points4[idx4] = P;
+					idx4++;
+				}else{
+					points10[idx10] = P;
+					idx10++;
+				}
+			}else if(-P.y/-P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
+				if(P.z > divHeight){
+					points4[idx4] = P;
+					idx4++;
+				}else{
+					points10[idx10] = P;
+					idx10++;
+				}
+			}else{
+				if(P.z > divHeight){
+					points5[idx5] = P;
+					idx5++;
+				}else{
+					points11[idx11] = P;
+					idx11++;
+				}
+			}
+		}else if(P.x > 0 && P.y < 0){
+			if(-P.y/P.x < sin(M_PI/6)/cos(M_PI/6)){
+				if(P.z > divHeight){
+					points6[idx6] = P;
+					idx6++;
+				}else{
+					points12[idx12] = P;
+					idx12++;
+				}
+			}else if(-P.y/P.x < sin(2*M_PI/6)/cos(2*M_PI/6)){
+				if(P.z > divHeight){
+					points6[idx6] = P;
+					idx6++;
+				}else{
+					points12[idx12] = P;
+					idx12++;
+				}
+			}else{
+				if(P.z > divHeight){
+					points5[idx5] = P;
+					idx5++;
+				}else{
+					points11[idx11] = P;
+					idx11++;
+				}
+			}
+		}
 	}
 
 //	*sur = TopParametric(*c,*c,*c,*c,x[0],x[1],x[2],x[3]);
-	vec3d h = sur1->at(0,0);
 //	printf("dividing height: %f\n",h.z);
 
-	printf("currently working with %d blocks with %d threads each\n",nBlocks,nThreads);
+	printf("currently working with %d blocks with %d threads each\n",12,4);
+    chrono::time_point<chrono::high_resolution_clock> t_start;
+    chrono::time_point<chrono::high_resolution_clock> t_stop;
+    chrono::microseconds t_duration;
+    t_start = chrono::high_resolution_clock::now();
 
-	kernel<<<nBlocks,nThreads>>>(points,distances,N,sur1,sur2,sur3,sur4,sur5,sur6,sur7,sur8,sur9,sur10,sur11,sur12,h.z);
+	kernel<<<12,4>>>(points1, points2, points3, points4, points5, points6, points7, points8, points9, points10, points11, points12,
+							idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8, idx9, idx10, idx11, idx12,
+							distances,N,sur1,sur2,sur3,sur4,sur5,sur6,sur7,sur8,sur9,sur10,sur11,sur12);
 	cudaDeviceSynchronize();
+	t_stop = chrono::high_resolution_clock::now();
+	t_duration = chrono::duration_cast<chrono::microseconds>(t_stop - t_start);
 
+	cout << "Computation time: " << t_duration.count() << " microseconds" << endl;
 	double sum = 0;
 	for(int i = 0; i < N; i++){
 		sum += distances[i];
@@ -324,7 +509,19 @@ int main(void)
 	printf("average distance: %lf\n", sum/N);
 	printf("number of points: %d\n", N);
 
-	CUDA_CHECK_RETURN(cudaFree(points));
+	CUDA_CHECK_RETURN(cudaFree(points1));
+	CUDA_CHECK_RETURN(cudaFree(points2));
+	CUDA_CHECK_RETURN(cudaFree(points3));
+	CUDA_CHECK_RETURN(cudaFree(points4));
+	CUDA_CHECK_RETURN(cudaFree(points5));
+	CUDA_CHECK_RETURN(cudaFree(points6));
+	CUDA_CHECK_RETURN(cudaFree(points7));
+	CUDA_CHECK_RETURN(cudaFree(points8));
+	CUDA_CHECK_RETURN(cudaFree(points9));
+	CUDA_CHECK_RETURN(cudaFree(points10));
+	CUDA_CHECK_RETURN(cudaFree(points11));
+	CUDA_CHECK_RETURN(cudaFree(points12));
+
 	CUDA_CHECK_RETURN(cudaFree(distances));
 	CUDA_CHECK_RETURN(cudaFree(sur1));
 	CUDA_CHECK_RETURN(cudaFree(sur2));

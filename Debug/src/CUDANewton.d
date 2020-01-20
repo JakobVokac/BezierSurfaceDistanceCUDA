@@ -218,6 +218,11 @@ src/CUDANewton.o : ../src/CUDANewton.cu \
     /usr/include/c++/5/bits/stl_vector.h \
     /usr/include/c++/5/bits/stl_bvector.h \
     /usr/include/c++/5/bits/vector.tcc \
+    /usr/include/c++/5/chrono \
+    /usr/include/c++/5/ratio \
+    /usr/include/c++/5/limits \
+    /usr/include/c++/5/ctime \
+    /usr/include/c++/5/bits/parse_numbers.h \
     /usr/include/c++/5/numeric \
     /usr/include/c++/5/bits/stl_numeric.h \
     ../src/model.h \
